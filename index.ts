@@ -25,6 +25,7 @@
  */
 import { config } from "dotenv";
 import express, { Request, Response } from "express";
+import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { verify, settle } from "@secured-finance/sf-x402";
 import {
@@ -62,18 +63,35 @@ const x402Config: X402Config | undefined =
   SVM_RPC_URL || SEPOLIA_RPC_URL
     ? {
         ...(SVM_RPC_URL && { svmConfig: { rpcUrl: SVM_RPC_URL } }),
-        ...(SEPOLIA_RPC_URL && { evmConfig: {
-          rpcUrls: {
-            sepolia: SEPOLIA_RPC_URL
-          }
-        }})
+        ...(SEPOLIA_RPC_URL && {
+          evmConfig: {
+            rpcUrls: {
+              sepolia: SEPOLIA_RPC_URL,
+            },
+          },
+        }),
       }
     : undefined;
 
 const app = express();
 
-app.use(express.json());
+// Trust proxy for Render deployment (required for rate limiting behind proxy)
+app.set("trust proxy", true);
 
+// Enable CORS for all origins (for demo purposes)
+app.use(cors());
+
+app.use(express.json());
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} → ${res.statusCode} (${duration}ms)`,
+    );
+  });
+  next();
+});
 // Rate limiting: 100 requests per minute per IP
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
