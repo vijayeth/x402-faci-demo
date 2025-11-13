@@ -69,7 +69,7 @@ const x402Config: X402Config | undefined =
               sepolia: SEPOLIA_RPC_URL,
             },
           },
-        }),
+        } as any), // Type assertion needed until library adds evmConfig support
       }
     : undefined;
 
@@ -251,6 +251,7 @@ app.post("/settle", async (req: Request, res: Response) => {
     }
 
     const response = await settle(signer, paymentPayload, paymentRequirements, x402Config);
+    console.log("[SETTLE SUCCESS]", JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
     console.error("[SETTLE ERROR]", error);
