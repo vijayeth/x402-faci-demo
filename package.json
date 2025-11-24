@@ -11,7 +11,7 @@
     "lint:check": "eslint . --ext .ts"
   },
   "dependencies": {
-    "@secured-finance/sf-x402": "^0.0.2",
+    "@secured-finance/sf-x402": "^0.0.4",
     "@types/cors": "^2.8.17",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

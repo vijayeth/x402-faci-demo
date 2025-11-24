@@ -49,6 +49,7 @@ const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY || "";
 const SVM_PRIVATE_KEY = process.env.SVM_PRIVATE_KEY || "";
 const SVM_RPC_URL = process.env.SVM_RPC_URL || "";
 const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL || "";
+const FILECOIN_CALIBRATION_RPC_URL = process.env.FILECOIN_CALIBRATION_RPC_URL || "";
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -59,13 +60,16 @@ if (!EVM_PRIVATE_KEY && !SVM_PRIVATE_KEY) {
 }
 
 const x402Config: X402Config | undefined =
-  SVM_RPC_URL || SEPOLIA_RPC_URL
+  SVM_RPC_URL || SEPOLIA_RPC_URL || FILECOIN_CALIBRATION_RPC_URL
     ? {
         ...(SVM_RPC_URL && { svmConfig: { rpcUrl: SVM_RPC_URL } }),
-        ...(SEPOLIA_RPC_URL && {
+        ...((SEPOLIA_RPC_URL || FILECOIN_CALIBRATION_RPC_URL) && {
           evmConfig: {
             rpcUrls: {
-              sepolia: SEPOLIA_RPC_URL,
+              ...(SEPOLIA_RPC_URL && { sepolia: SEPOLIA_RPC_URL }),
+              ...(FILECOIN_CALIBRATION_RPC_URL && {
+                "filecoin-calibration": FILECOIN_CALIBRATION_RPC_URL,
+              }),
             },
           },
         }),
@@ -238,7 +242,7 @@ app.post("/verify", async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       network: network || "unknown",
-      rpcUrl: SEPOLIA_RPC_URL ? "custom" : "default",
+      rpcUrl: SEPOLIA_RPC_URL || FILECOIN_CALIBRATION_RPC_URL ? "custom" : "default",
       timestamp: new Date().toISOString(),
     });
     const errorMessage = error instanceof Error ? error.message : "Invalid request";
@@ -319,13 +323,24 @@ app.post("/settle", async (req: Request, res: Response) => {
     }
 
     const response = await settle(signer, paymentPayload, paymentRequirements, x402Config);
+
+    // LOG SETTLEMENT RESPONSE FOR DEBUGGING
+    console.log("[SETTLE RESPONSE]", {
+      success: response.success,
+      transaction: response.transaction || "EMPTY/MISSING",
+      errorReason: response.errorReason || "none",
+      network: response.network,
+      payer: response.payer || "unknown",
+      timestamp: new Date().toISOString(),
+    });
+
     res.json(response);
   } catch (error) {
     console.error("[SETTLE ERROR]", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       network: network || "unknown",
-      rpcUrl: SEPOLIA_RPC_URL ? "custom" : "default",
+      rpcUrl: SEPOLIA_RPC_URL || FILECOIN_CALIBRATION_RPC_URL ? "custom" : "default",
       timestamp: new Date().toISOString(),
     });
     const errorMessage = error instanceof Error ? error.message : "Settlement failed";
